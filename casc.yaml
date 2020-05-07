@@ -1,0 +1,57 @@
+jenkins:
+    systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin"
+  
+  jobs:
+    - script: >
+        organizationFolder('UNITY') {
+          description("Bitbucket orga folder configured with JCasC")
+          displayName('UNITY')
+          organizations {
+            bitbucket {
+              serverUrl("http://wfbucket.ibi.com:7990")
+              repoOwner("UNITY")
+              credentialsId("as-creds-bitbacket")
+              traits {
+                webhookRegistrationTrait {
+                  mode("ITEM")
+                }
+                submoduleOptionTrait {
+                  extension {
+                    disableSubmodules(false)
+                    recursiveSubmodules(true)
+                    trackingSubmodules(false)
+                    reference(null)
+                    timeout(null)
+                    parentCredentials(true)
+                  }
+                }
+              }
+            }
+          }
+          configure { node ->
+              def traits = node / navigators / 'com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMNavigator' / traits
+              traits << 'com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait' {
+                  strategyId('3')
+              }
+              traits << 'com.cloudbees.jenkins.plugins.bitbucket.SSHCheckoutTrait' {
+                  credentialsId('wfbucket')
+              }
+          }
+          projectFactories {
+              workflowMultiBranchProjectFactory {
+                  scriptPath 'ValidationJenkinsfile'
+              }
+          }
+          orphanedItemStrategy {
+            discardOldItems {
+              daysToKeep(-1)
+              numToKeep(-1)
+            }
+          }
+          configure { node ->
+            node / triggers / 'com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger' {
+              spec('H H * * *')
+              interval(86400000)
+            }
+          }
+        }
